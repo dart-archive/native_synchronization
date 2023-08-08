@@ -105,6 +105,8 @@ class Mailbox {
   static Uint8List _toList(Pointer<Uint8> buffer, int length) {
     return length == 0
         ? _emptyResponse
+        // We have to ignore sdk_version_since warning due to dartbug.com/53142.
+        // ignore: sdk_version_since
         : buffer.asTypedList(length, finalizer: malloc.nativeFree);
   }
 
