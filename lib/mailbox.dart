@@ -108,6 +108,7 @@ class Mailbox {
     }
 
     // TODO: remove feature detection once 3.1 becomes stable.
+    // ignore: omit_local_variable_types
     final Uint8List Function(int) asTypedList = buffer.asTypedList;
     if (asTypedList is Uint8List Function(int,
         {Pointer<NativeFinalizerFunction> finalizer})) {
