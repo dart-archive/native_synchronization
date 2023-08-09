@@ -15,12 +15,12 @@ void main() {
   group('mutex', () {
     test('simple', () {
       final mutex = Mutex();
-      mutex.lock();
-      mutex.unlock();
+      expect(mutex.runLocked(() => 42), equals(42));
     });
 
-    void spawnTestIsolate(int ptrAddress, Sendable<Mutex> sendableMutex) {
-      Isolate.run(() {
+    Future<String> spawnHelperIsolate(
+        int ptrAddress, Sendable<Mutex> sendableMutex) {
+      return Isolate.run(() {
         final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
         final mutex = sendableMutex.materialize();
 
@@ -39,71 +39,81 @@ void main() {
           }
         }
 
-        return null;
+        return 'success';
       });
     }
 
     test('isolate', () async {
-      final ptr = calloc.allocate<Uint8>(1);
-      final mutex = Mutex();
+      await using((arena) async {
+        final ptr = arena.allocate<Uint8>(1);
+        final mutex = Mutex();
 
-      spawnTestIsolate(ptr.address, mutex.asSendable);
+        final helperResult = spawnHelperIsolate(ptr.address, mutex.asSendable);
 
-      while (true) {
-        final sw = Stopwatch()..start();
-        if (mutex.runLocked(() {
-          if (sw.elapsedMilliseconds > 300 && ptr.value == 1) {
-            ptr.value = 2;
-            return true;
+        while (true) {
+          final sw = Stopwatch()..start();
+          if (mutex.runLocked(() {
+            if (sw.elapsedMilliseconds > 300 && ptr.value == 1) {
+              ptr.value = 2;
+              return true;
+            }
+            return false;
+          })) {
+            break;
           }
-          return false;
-        })) {
-          break;
+          await Future.delayed(const Duration(milliseconds: 10));
         }
-        sleep(const Duration(milliseconds: 10));
-      }
+        expect(await helperResult, equals('success'));
+      });
     });
   });
 
   group('condvar', () {
-    void spawnTestIsolate(int ptrAddress, Sendable<Mutex> sendableMutex,
+    Future<String> spawnHelperIsolate(
+        int ptrAddress,
+        Sendable<Mutex> sendableMutex,
         Sendable<ConditionVariable> sendableCondVar) {
-      Isolate.run(() {
+      return Isolate.run(() {
         final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
         final mutex = sendableMutex.materialize();
         final condVar = sendableCondVar.materialize();
 
-        mutex.runLocked(() {
+        return mutex.runLocked(() {
           ptr.value = 1;
-          while (ptr.value != 2) {
+          while (ptr.value == 1) {
             condVar.wait(mutex);
           }
+          return ptr.value == 2 ? 'success' : 'failure';
         });
-        return null;
       });
     }
 
-    test('isolate', () {
-      final ptr = calloc.allocate<Uint8>(1);
-      final mutex = Mutex();
-      final condVar = ConditionVariable();
+    test('isolate', () async {
+      await using((arena) async {
+        final ptr = arena.allocate<Uint8>(1);
+        final mutex = Mutex();
+        final condVar = ConditionVariable();
 
-      spawnTestIsolate(ptr.address, mutex.asSendable, condVar.asSendable);
+        final helperResult = spawnHelperIsolate(
+            ptr.address, mutex.asSendable, condVar.asSendable);
 
-      while (true) {
-        final success = mutex.runLocked(() {
-          if (ptr.value == 1) {
-            ptr.value = 2;
-            condVar.notify();
-            return true;
+        while (true) {
+          final success = mutex.runLocked(() {
+            if (ptr.value == 1) {
+              ptr.value = 2;
+              condVar.notify();
+              return true;
+            }
+            return false;
+          });
+          if (success) {
+            break;
           }
-          return false;
-        });
-        if (success) {
-          break;
+          await Future.delayed(const Duration(milliseconds: 20));
         }
-        sleep(const Duration(milliseconds: 20));
-      }
+
+        expect(await helperResult, equals('success'));
+      });
     });
   });
 }

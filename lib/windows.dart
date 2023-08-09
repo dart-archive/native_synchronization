@@ -5,16 +5,16 @@
 part of 'primitives.dart';
 
 class _WindowsMutex extends Mutex {
-  static const _sizeInBytes = 8;
+  static const _sizeInBytes = 8; // `sizeof(SRWLOCK)`
 
   final Pointer<SRWLOCK> _impl;
 
   static final _finalizer = Finalizer<Pointer<SRWLOCK>>((ptr) {
-    calloc.free(ptr);
+    malloc.free(ptr);
   });
 
   _WindowsMutex()
-      : _impl = calloc.allocate(_WindowsMutex._sizeInBytes),
+      : _impl = malloc.allocate(_WindowsMutex._sizeInBytes),
         super._() {
     InitializeSRWLock(_impl);
     _finalizer.attach(this, _impl);
@@ -25,26 +25,26 @@ class _WindowsMutex extends Mutex {
         super._();
 
   @override
-  void lock() => AcquireSRWLockExclusive(_impl);
+  void _lock() => AcquireSRWLockExclusive(_impl);
 
   @override
-  void unlock() => ReleaseSRWLockExclusive(_impl);
+  void _unlock() => ReleaseSRWLockExclusive(_impl);
 
   @override
   int get _address => _impl.address;
 }
 
 class _WindowsConditionVariable extends ConditionVariable {
-  static const _sizeInBytes = 8;
+  static const _sizeInBytes = 8; // `sizeof(CONDITION_VARIABLE)`
 
   final Pointer<CONDITION_VARIABLE> _impl;
 
   static final _finalizer = Finalizer<Pointer<CONDITION_VARIABLE>>((ptr) {
-    calloc.free(ptr);
+    malloc.free(ptr);
   });
 
   _WindowsConditionVariable()
-      : _impl = calloc.allocate(_WindowsConditionVariable._sizeInBytes),
+      : _impl = malloc.allocate(_WindowsConditionVariable._sizeInBytes),
         super._() {
     InitializeConditionVariable(_impl);
     _finalizer.attach(this, _impl);
@@ -65,7 +65,7 @@ class _WindowsConditionVariable extends ConditionVariable {
     const exclusive = 0;
     if (SleepConditionVariableSRW(_impl, mutex._impl, infinite, exclusive) ==
         0) {
-      throw StateError('failed to wait on a condition variable');
+      throw StateError('Failed to wait on a condition variable');
     }
   }
 

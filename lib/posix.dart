@@ -5,21 +5,23 @@
 part of 'primitives.dart';
 
 class _PosixMutex extends Mutex {
+  /// This is maximum value of `sizeof(pthread_mutex_t)` across all supported
+  /// platforms.
   static const _sizeInBytes = 64;
 
   final Pointer<pthread_mutex_t> _impl;
 
   static final _finalizer = Finalizer<Pointer<pthread_mutex_t>>((ptr) {
     pthread_mutex_destroy(ptr);
-    calloc.free(ptr);
+    malloc.free(ptr);
   });
 
   _PosixMutex()
-      : _impl = calloc.allocate(_PosixMutex._sizeInBytes),
+      : _impl = malloc.allocate(_PosixMutex._sizeInBytes),
         super._() {
     if (pthread_mutex_init(_impl, nullptr) != 0) {
-      calloc.free(_impl);
-      throw StateError('failed to initialize mutex');
+      malloc.free(_impl);
+      throw StateError('Failed to initialize mutex');
     }
     _finalizer.attach(this, _impl);
   }
@@ -29,16 +31,16 @@ class _PosixMutex extends Mutex {
         super._();
 
   @override
-  void lock() {
+  void _lock() {
     if (pthread_mutex_lock(_impl) != 0) {
-      throw StateError('failed to lock mutex');
+      throw StateError('Failed to lock mutex');
     }
   }
 
   @override
-  void unlock() {
+  void _unlock() {
     if (pthread_mutex_unlock(_impl) != 0) {
-      throw StateError('failed to unlock mutex');
+      throw StateError('Failed to unlock mutex');
     }
   }
 
@@ -47,21 +49,23 @@ class _PosixMutex extends Mutex {
 }
 
 class _PosixConditionVariable extends ConditionVariable {
+  /// This is maximum value of `sizeof(pthread_cond_t)` across all supported
+  /// platforms.
   static const _sizeInBytes = 64;
 
   final Pointer<pthread_cond_t> _impl;
 
   static final _finalizer = Finalizer<Pointer<pthread_cond_t>>((ptr) {
     pthread_cond_destroy(ptr);
-    calloc.free(ptr);
+    malloc.free(ptr);
   });
 
   _PosixConditionVariable()
-      : _impl = calloc.allocate(_PosixConditionVariable._sizeInBytes),
+      : _impl = malloc.allocate(_PosixConditionVariable._sizeInBytes),
         super._() {
     if (pthread_cond_init(_impl, nullptr) != 0) {
-      calloc.free(_impl);
-      throw StateError('failed to initialize condition variable');
+      malloc.free(_impl);
+      throw StateError('Failed to initialize condition variable');
     }
     _finalizer.attach(this, _impl);
   }
@@ -73,14 +77,14 @@ class _PosixConditionVariable extends ConditionVariable {
   @override
   void notify() {
     if (pthread_cond_signal(_impl) != 0) {
-      throw StateError('failed to signal condition variable');
+      throw StateError('Failed to signal condition variable');
     }
   }
 
   @override
   void wait(covariant _PosixMutex mutex) {
     if (pthread_cond_wait(_impl, mutex._impl) != 0) {
-      throw StateError('failed to wait on a condition variable');
+      throw StateError('Failed to wait on a condition variable');
     }
   }
 

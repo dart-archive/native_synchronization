@@ -37,7 +37,7 @@ part 'windows.dart';
 /// but it can be converted to a `Sendable<Mutex>` via `asSendable` getter.
 ///
 /// Mutex objects are owned by an isolate which created them.
-sealed class Mutex {
+sealed class Mutex implements Finalizable {
   Mutex._();
 
   factory Mutex() => Platform.isWindows ? _WindowsMutex() : _PosixMutex();
@@ -50,22 +50,26 @@ sealed class Mutex {
   ///
   /// **Warning**: attempting to hold a mutex across asynchronous suspension
   /// points will lead to undefined behavior and potentially crashes.
-  void lock();
+  void _lock();
 
   /// Release exclusive ownership of this mutex.
   ///
   /// It is an error to release ownership of the mutex if it was not
   /// previously acquired.
-  void unlock();
+  void _unlock();
 
-  /// Run the given [action] while holding exclusive ownership of the
-  /// mutex.
+  /// Run the given synchronous `action` under a mutex.
+  ///
+  /// This function takes exclusive ownership of the mutex, executes `action`
+  /// and then releases the mutex. It returns the value returned by `action`.
+  ///
+  /// **Warning**: you can't combine `runLocked` with an asynchronous code.
   R runLocked<R>(R Function() action) {
-    lock();
+    _lock();
     try {
       return action();
     } finally {
-      unlock();
+      _unlock();
     }
   }
 
@@ -86,7 +90,7 @@ sealed class Mutex {
 /// object via [asSendable] getter.
 ///
 /// [ConditionVariable] objects are owned by an isolate which created them.
-sealed class ConditionVariable {
+sealed class ConditionVariable implements Finalizable {
   ConditionVariable._();
 
   factory ConditionVariable() => Platform.isWindows

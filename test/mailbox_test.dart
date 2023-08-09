@@ -11,20 +11,22 @@ import 'package:native_synchronization/sendable.dart';
 import 'package:test/test.dart';
 
 void main() {
-  void startHelperIsolate(Sendable<Mailbox> sendableMailbox) {
-    Isolate.run(() {
+  Future<String> startHelperIsolate(Sendable<Mailbox> sendableMailbox) {
+    return Isolate.run(() {
       sleep(const Duration(milliseconds: 500));
       final mailbox = sendableMailbox.materialize();
       mailbox.put(Uint8List(42)..[41] = 42);
+      return 'success';
     });
   }
 
   test('mailbox', () async {
     final mailbox = Mailbox();
-    startHelperIsolate(mailbox.asSendable);
+    final helperResult = startHelperIsolate(mailbox.asSendable);
     final value = mailbox.take();
     expect(value, isA<Uint8List>());
     expect(value.length, equals(42));
     expect(value[41], equals(42));
+    expect(await helperResult, equals('success'));
   });
 }
