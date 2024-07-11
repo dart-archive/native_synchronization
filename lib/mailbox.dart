@@ -72,8 +72,14 @@ class Mailbox {
   void put(Uint8List message, {bool force = false}) {
     final buffer = message.isEmpty ? nullptr : _toBuffer(message);
     _mutex.runLocked(() {
-      if (!force && _mailbox.ref.state != _stateEmpty) {
-        throw StateError('Mailbox is full');
+      if (_mailbox.ref.state != _stateEmpty) {
+        if (!force) {
+          throw StateError('Mailbox is full');
+        }
+
+        if (_mailbox.ref.bufferLength > 0) {
+          malloc.free(_mailbox.ref.buffer);
+        }
       }
 
       _mailbox.ref.state = _stateFull;
