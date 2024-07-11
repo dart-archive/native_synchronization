@@ -29,4 +29,14 @@ void main() {
     expect(value[41], equals(42));
     expect(await helperResult, equals('success'));
   });
+
+  test('mailbox throws', () {
+    final mailbox = Mailbox();
+    mailbox.put(Uint8List(42)..[41] = 42);
+    expect(() => mailbox.put(Uint8List(0)), throwsA(TypeMatcher<StateError>()));
+    mailbox.put(Uint8List(0), force: true);
+    final value = mailbox.take();
+    expect(value, isA<Uint8List>());
+    expect(value.length, equals(0));
+  });
 }

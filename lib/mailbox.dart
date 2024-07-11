@@ -67,11 +67,12 @@ class Mailbox {
 
   /// Place a message into the mailbox if has space for it.
   ///
-  /// If mailbox already contains a message then [put] will throw.
-  void put(Uint8List message) {
+  /// If mailbox already contains a message then [put] will throw, unless
+  /// [force] is set to `true`.
+  void put(Uint8List message, {bool force = false}) {
     final buffer = message.isEmpty ? nullptr : _toBuffer(message);
     _mutex.runLocked(() {
-      if (_mailbox.ref.state != _stateEmpty) {
+      if (!force && _mailbox.ref.state != _stateEmpty) {
         throw StateError('Mailbox is full');
       }
 
