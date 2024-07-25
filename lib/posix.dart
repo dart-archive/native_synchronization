@@ -4,6 +4,10 @@
 
 part of 'primitives.dart';
 
+/// Posix timeout error number.
+// ignore: constant_identifier_names
+const ETIMEDOUT = 110;
+
 class _PosixMutex extends Mutex {
   /// This is maximum value of `sizeof(pthread_mutex_t)` across all supported
   /// platforms.
@@ -31,8 +35,33 @@ class _PosixMutex extends Mutex {
         super._();
 
   @override
-  void _lock() {
-    if (pthread_mutex_lock(_impl) != 0) {
+  void _lock({Duration? timeout}) {
+    if (timeout == null) {
+      if (pthread_mutex_lock(_impl) != 0) {
+        throw StateError('Failed to lock mutex');
+      }
+    } else {
+      _timedLock(timeout);
+    }
+  }
+
+  void _timedLock(Duration timeout) {
+    final timespec =
+        malloc.allocate<pthread_timespec_t>(sizeOf<pthread_timespec_t>());
+
+    /// calculate the absolute timeout in seconds
+    final secondsSinceEpoc = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final abstimeout = secondsSinceEpoc + timeout.inSeconds;
+
+    timespec.ref.tv_sec = abstimeout;
+    timespec.ref.tv_nsec = 0;
+    final result = pthread_mutex_timedlock(_impl, timespec);
+    malloc.free(timespec);
+
+    if (result == ETIMEDOUT) {
+      throw TimeoutException('Timed out waiting for mutex');
+    }
+    if (result != 0) {
       throw StateError('Failed to lock mutex');
     }
   }
@@ -82,8 +111,32 @@ class _PosixConditionVariable extends ConditionVariable {
   }
 
   @override
-  void wait(covariant _PosixMutex mutex) {
-    if (pthread_cond_wait(_impl, mutex._impl) != 0) {
+  void wait(covariant _PosixMutex mutex, {Duration? timeout}) {
+    if (timeout == null) {
+      if (pthread_cond_wait(_impl, mutex._impl) != 0) {
+        throw StateError('Failed to wait on a condition variable');
+      }
+    } else {
+      _timedWait(timeout, mutex);
+    }
+  }
+
+  /// Waits on a condition variable with a timeout.
+  void _timedWait(Duration timeout, _PosixMutex mutex) {
+    final abstime =
+        malloc.allocate<pthread_timespec_t>(sizeOf<pthread_timespec_t>());
+    abstime.ref.tv_sec =
+        (DateTime.now().millisecondsSinceEpoch ~/ 1000) + timeout.inSeconds;
+    abstime.ref.tv_nsec = 0;
+    final result = pthread_cond_timedwait(_impl, mutex._impl, abstime);
+
+    malloc.free(abstime);
+
+    if (result == ETIMEDOUT) {
+      throw TimeoutException('Timed out wating for Mutex');
+    }
+
+    if (result != 0) {
       throw StateError('Failed to wait on a condition variable');
     }
   }

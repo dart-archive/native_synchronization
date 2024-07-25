@@ -7,8 +7,8 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
-import 'package:native_synchronization/primitives.dart';
-import 'package:native_synchronization/sendable.dart';
+import 'primitives.dart';
+import 'sendable.dart';
 
 final class _MailboxRepr extends Struct {
   external Pointer<Uint8> buffer;
@@ -48,9 +48,11 @@ class Mailbox {
   static const _stateEmpty = 0;
   static const _stateFull = 1;
 
-  static final finalizer = Finalizer((Pointer<_MailboxRepr> mailbox) {
-    calloc.free(mailbox.ref.buffer);
-    calloc.free(mailbox);
+  static final finalizer = Finalizer((mailbox) {
+    final p = mailbox! as Pointer<_MailboxRepr>;
+    calloc
+      ..free(p.ref.buffer)
+      ..free(p);
   });
 
   Mailbox()
@@ -67,7 +69,8 @@ class Mailbox {
 
   /// Place a message into the mailbox if has space for it.
   ///
-  /// If mailbox already contains a message then [put] will throw.
+  /// If mailbox already contains a message then [put] will throw
+  /// a [StateError].
   void put(Uint8List message) {
     final buffer = message.isEmpty ? nullptr : _toBuffer(message);
     _mutex.runLocked(() {
@@ -87,7 +90,44 @@ class Mailbox {
   ///
   /// If mailbox is empty this will synchronously block until message
   /// is available.
-  Uint8List take() => _mutex.runLocked(() {
+  /// If [timeout] is provided then this will block for at most [timeout].
+  /// If the timeout expires before a message is available then this will
+  /// throw a [TimeoutException].
+  /// The smallest [timeout] is 1 seconds. Anything less than 1 second will
+  /// treated as zero seconds.
+  Uint8List take({Duration? timeout}) {
+    if (timeout != null) {
+      return _takeTimed(timeout);
+    } else {
+      return _take();
+    }
+  }
+
+  Uint8List _takeTimed(Duration timeout) {
+    final start = DateTime.now();
+
+    return _mutex.runLocked(
+      timeout: timeout,
+      () {
+        timeout = timeout - (DateTime.now().difference(start));
+        if (timeout < Duration.zero) {
+          timeout = Duration.zero;
+        }
+        while (_mailbox.ref.state != _stateFull) {
+          _condVar.wait(_mutex, timeout: timeout);
+        }
+
+        final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
+
+        _mailbox.ref.state = _stateEmpty;
+        _mailbox.ref.buffer = nullptr;
+        _mailbox.ref.bufferLength = 0;
+        return result;
+      },
+    );
+  }
+
+  Uint8List _take() => _mutex.runLocked(() {
         while (_mailbox.ref.state != _stateFull) {
           _condVar.wait(_mutex);
         }
@@ -115,8 +155,8 @@ class Mailbox {
       return asTypedList(length, finalizer: malloc.nativeFree);
     }
 
-    final result = Uint8List(length);
-    result.setRange(0, length, buffer.asTypedList(length));
+    final result = Uint8List(length)
+      ..setRange(0, length, buffer.asTypedList(length));
     malloc.free(buffer);
     return result;
   }
