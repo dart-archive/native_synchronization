@@ -80,7 +80,8 @@ void main() {
     test('Timeout', () async {
       final mutex = Mutex();
 
-      spawnLockedMutex(mutex.asSendable, const Duration(seconds: 10));
+      unawaited(
+          spawnLockedMutex(mutex.asSendable, const Duration(seconds: 10)));
 
       /// give the isoalte a chance to start.
       sleep(const Duration(seconds: 2));

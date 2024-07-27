@@ -59,7 +59,7 @@ class _PosixMutex extends Mutex {
     malloc.free(timespec);
 
     if (result == ETIMEDOUT) {
-      throw TimeoutException('Timed out waiting for mutex');
+      throw TimeoutException('Timed out waiting for Mutex lock');
     }
     if (result != 0) {
       throw StateError('Failed to lock mutex');
@@ -133,7 +133,7 @@ class _PosixConditionVariable extends ConditionVariable {
     malloc.free(abstime);
 
     if (result == ETIMEDOUT) {
-      throw TimeoutException('Timed out wating for Mutex');
+      throw TimeoutException('Timed out waiting for conditional variable');
     }
 
     if (result != 0) {

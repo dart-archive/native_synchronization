@@ -71,7 +71,7 @@ class _WindowsConditionVariable extends ConditionVariable {
 
     if (result != 1) {
       if (GetLastError() == ERROR_TIMEOUT) {
-        throw TimeoutException('Timeout waiting for Mutex');
+        throw TimeoutException('Timeout waiting for conditional variable');
       } else {
         throw StateError('Failed to wait on a condition variable');
       }
