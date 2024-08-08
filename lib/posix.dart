@@ -46,15 +46,7 @@ class _PosixMutex extends Mutex {
   }
 
   void _timedLock(Duration timeout) {
-    final timespec =
-        malloc.allocate<pthread_timespec_t>(sizeOf<pthread_timespec_t>());
-
-    /// calculate the absolute timeout in seconds
-    final secondsSinceEpoc = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final abstimeout = secondsSinceEpoc + timeout.inSeconds;
-
-    timespec.ref.tv_sec = abstimeout;
-    timespec.ref.tv_nsec = 0;
+    var timespec = _allocateTimespec(timeout);
     final result = pthread_mutex_timedlock(_impl, timespec);
     malloc.free(timespec);
 
@@ -110,7 +102,7 @@ class _PosixConditionVariable extends ConditionVariable {
     }
   }
 
-  @override
+    @override
   void wait(covariant _PosixMutex mutex, {Duration? timeout}) {
     if (timeout == null) {
       if (pthread_cond_wait(_impl, mutex._impl) != 0) {
@@ -123,14 +115,10 @@ class _PosixConditionVariable extends ConditionVariable {
 
   /// Waits on a condition variable with a timeout.
   void _timedWait(Duration timeout, _PosixMutex mutex) {
-    final abstime =
-        malloc.allocate<pthread_timespec_t>(sizeOf<pthread_timespec_t>());
-    abstime.ref.tv_sec =
-        (DateTime.now().millisecondsSinceEpoch ~/ 1000) + timeout.inSeconds;
-    abstime.ref.tv_nsec = 0;
-    final result = pthread_cond_timedwait(_impl, mutex._impl, abstime);
+    final wakeUpTime = _allocateTimespec(timeout);
+    final result = pthread_cond_timedwait(_impl, mutex._impl, wakeUpTime);
 
-    malloc.free(abstime);
+    malloc.free(wakeUpTime);
 
     if (result == ETIMEDOUT) {
       throw TimeoutException('Timed out waiting for conditional variable');
@@ -143,4 +131,23 @@ class _PosixConditionVariable extends ConditionVariable {
 
   @override
   int get _address => _impl.address;
+}
+
+/// Create a posix timespec from a [timeout].
+/// The returned [pthread_timespec_t] must be freed by a call
+/// to [malloc.free]
+Pointer<pthread_timespec_t> _allocateTimespec(Duration timeout) {
+  final timespec =
+      malloc.allocate<pthread_timespec_t>(sizeOf<pthread_timespec_t>());
+
+  /// calculate the absolute timeout in microseconds
+  final microSecondsSinceEpoc = DateTime.now().microsecondsSinceEpoch;
+  final wakupTime = microSecondsSinceEpoc + timeout.inMicroseconds;
+
+  /// seconds since the epoc to wait until.
+  timespec.ref.tv_sec = wakupTime ~/ 1000000;
+
+  /// additional nano-seconds after tv_sec to wait
+  timespec.ref.tv_nsec = (wakupTime % 1000000) * 1000;
+  return timespec;
 }

@@ -48,7 +48,7 @@ sealed class Mutex implements Finalizable {
   /// If this mutex is already acquired then an attempt to acquire it
   /// blocks the current thread until the mutex is released by the
   /// current owner or the timeout expires.
-  /// 
+  ///
   /// If no [timeout] is supplied then the method waits indefinitely.
   ///
   /// If the [timeout] expires then a [TimeoutException] is thrown.
@@ -112,8 +112,7 @@ sealed class ConditionVariable implements Finalizable {
   ///
   /// if a [timeout] is passed and it expires
   /// then a [TimeoutException] is thrown.
-  /// The smallest [timeout] is 1 second, anything less will
-  /// be treated as 0 seconds.
+  /// Timeout resolution to microseconds is supported.
   void wait(Mutex mutex, {Duration? timeout});
 
   /// Wake up at least one thread waiting on this condition variable.
