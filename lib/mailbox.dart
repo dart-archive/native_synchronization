@@ -93,8 +93,7 @@ class Mailbox {
   /// If [timeout] is provided then this will block for at most [timeout].
   /// If the timeout expires before a message is available then this will
   /// throw a [TimeoutException].
-  /// The smallest [timeout] is 1 seconds. Anything less than 1 second will
-  /// treated as zero seconds.
+  /// The [timeout] supports a resolution of microseconds.
   Uint8List take({Duration? timeout}) {
     if (timeout != null) {
       return _takeTimed(timeout);
@@ -103,18 +102,16 @@ class Mailbox {
     }
   }
 
-  Uint8List _takeTimed(Duration timeout) {
+  Uint8List _takeTimed(final Duration timeout) {
     final start = DateTime.now();
 
     return _mutex.runLocked(
       timeout: timeout,
       () {
-        timeout = timeout - (DateTime.now().difference(start));
-        if (timeout < Duration.zero) {
-          timeout = Duration.zero;
-        }
-        while (_mailbox.ref.state != _stateFull) {
-          _condVar.wait(_mutex, timeout: timeout);
+        /// Wait for an item to be posted into the mailbox.
+        while (_mailbox.ref.state == _stateEmpty) {
+          final remainingTime = _remainingTime(timeout, start);
+          _condVar.wait(_mutex, timeout: remainingTime);
         }
 
         final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
@@ -125,6 +122,14 @@ class Mailbox {
         return result;
       },
     );
+  }
+
+  Duration _remainingTime(Duration timeout, DateTime start) {
+    var remainingTime = timeout - (DateTime.now().difference(start));
+    if (remainingTime < Duration.zero) {
+      remainingTime = Duration.zero;
+    }
+    return remainingTime;
   }
 
   Uint8List _take() => _mutex.runLocked(() {
