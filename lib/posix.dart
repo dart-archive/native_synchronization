@@ -102,7 +102,7 @@ class _PosixConditionVariable extends ConditionVariable {
     }
   }
 
-    @override
+  @override
   void wait(covariant _PosixMutex mutex, {Duration? timeout}) {
     if (timeout == null) {
       if (pthread_cond_wait(_impl, mutex._impl) != 0) {
