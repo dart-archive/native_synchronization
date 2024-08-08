@@ -10,12 +10,10 @@ final class pthread_mutex_t extends Opaque {}
 
 final class pthread_cond_t extends Opaque {}
 
-// final class pthread_timespec_t extends Opaque {}
-
 final class pthread_timespec_t extends Struct {
   @Int64()
   external int tv_sec;
-  
+
   @Int64()
   external int tv_nsec;
 }
