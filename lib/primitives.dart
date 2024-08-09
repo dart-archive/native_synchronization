@@ -72,7 +72,10 @@ sealed class Mutex implements Finalizable {
   ///
   /// **Warning**: you can't combine `runLocked` with an asynchronous code.
   R runLocked<R>(R Function() action, {Duration? timeout}) {
+     print('Mutex::runLocked: $timeout');
+    print('Mutex: about to call lock');
     _lock(timeout: timeout);
+    print('Mutex: calling action');
     try {
       return action();
     } finally {

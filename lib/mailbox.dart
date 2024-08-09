@@ -50,6 +50,7 @@ class Mailbox {
   static const _stateClosed = 2;
 
   static final finalizer = Finalizer((mailbox) {
+    print('finalizer called');
     final p = mailbox! as Pointer<_MailboxRepr>;
     calloc
       ..free(p.ref.buffer)
@@ -126,24 +127,34 @@ class Mailbox {
   Uint8List _takeTimed(final Duration timeout) {
     final start = DateTime.now();
 
+    print('Mailbox::_takeTimed - enter');
     return _mutex.runLocked(
       timeout: timeout,
       () {
+        print('Mailbox::_takeTimed - lock acquired');
+
         /// Wait for an item to be posted into the mailbox.
         while (_mailbox.ref.state == _stateEmpty) {
           final remainingTime = _remainingTime(timeout, start);
+          // _condVar.wait(_mutex);
           _condVar.wait(_mutex, timeout: remainingTime);
         }
-        if (_mailbox.ref.state == _stateClosed) {
+        final state = _mailbox.ref.state;
+        print('State: $state');
+
+        if (state == _stateClosed) {
           throw StateError('Mailbox is closed');
         }
 
-        final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
+        // final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
 
-        _mailbox.ref.state = _stateEmpty;
-        _mailbox.ref.buffer = nullptr;
-        _mailbox.ref.bufferLength = 0;
-        return result;
+        // _mailbox.ref.state = _stateEmpty;
+        // _mailbox.ref.buffer = nullptr;
+        // _mailbox.ref.bufferLength = 0;
+        // return result;
+
+        print('Mailbox::_takeTimed - lock relased');
+        return Uint8List(1);
       },
     );
   }

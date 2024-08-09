@@ -36,6 +36,7 @@ class _PosixMutex extends Mutex {
 
   @override
   void _lock({Duration? timeout}) {
+    print(' PosixMutex:Lock - enter');
     if (timeout == null) {
       if (pthread_mutex_lock(_impl) != 0) {
         throw StateError('Failed to lock mutex');
@@ -43,26 +44,35 @@ class _PosixMutex extends Mutex {
     } else {
       _timedLock(timeout);
     }
+    print(' PosixMutex:Lock - return');
   }
 
   void _timedLock(Duration timeout) {
+    print('PosixMutex::_timedLock: $timeout');
     var timespec = _allocateTimespec(timeout);
+    print('call posiz timed lock');
     final result = pthread_mutex_timedlock(_impl, timespec);
+    print('returned from posiz timed lock');
     malloc.free(timespec);
 
     if (result == ETIMEDOUT) {
+      print('throwning timeout');
       throw TimeoutException('Timed out waiting for Mutex lock');
     }
     if (result != 0) {
       throw StateError('Failed to lock mutex');
     }
+
+    print('PosixMutex::_timedLock: returned');
   }
 
   @override
   void _unlock() {
+    print('PosixMutex::_unLock- enter');
     if (pthread_mutex_unlock(_impl) != 0) {
       throw StateError('Failed to unlock mutex');
     }
+    print('PosixMutex::_unLock- return');
   }
 
   @override
@@ -148,6 +158,10 @@ Pointer<pthread_timespec_t> _allocateTimespec(Duration timeout) {
   timespec.ref.tv_sec = wakupTime ~/ 1000000;
 
   /// additional nano-seconds after tv_sec to wait
-  timespec.ref.tv_nsec = (wakupTime % 1000000) * 1000;
+  // timespec.ref.tv_nsec = (wakupTime % 1000000) * 1000;
+  timespec.ref.tv_nsec = 0;
+
+  print(timespec.ref.tv_sec);
+  print(timespec.ref.tv_nsec);
   return timespec;
 }
