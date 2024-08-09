@@ -47,6 +47,7 @@ class Mailbox {
 
   static const _stateEmpty = 0;
   static const _stateFull = 1;
+  static const _stateClosed = 2;
 
   static final finalizer = Finalizer((mailbox) {
     final p = mailbox! as Pointer<_MailboxRepr>;
@@ -69,13 +70,13 @@ class Mailbox {
 
   /// Place a message into the mailbox if has space for it.
   ///
-  /// If mailbox already contains a message then [put] will throw
-  /// a [StateError].
+  /// If mailbox already contains a message or mailbox is closed then [put] will
+  /// throw [StateError].
   void put(Uint8List message) {
     final buffer = message.isEmpty ? nullptr : _toBuffer(message);
     _mutex.runLocked(() {
       if (_mailbox.ref.state != _stateEmpty) {
-        throw StateError('Mailbox is full');
+        throw StateError('Mailbox is closed or full');
       }
 
       _mailbox.ref.state = _stateFull;
@@ -86,10 +87,27 @@ class Mailbox {
     });
   }
 
+  /// Close a mailbox.
+  ///
+  /// If mailbox already contains a message then [close] will drop the message.
+  void close() => _mutex.runLocked(() {
+        if (_mailbox.ref.state == _stateFull && _mailbox.ref.bufferLength > 0) {
+          malloc.free(_mailbox.ref.buffer);
+        }
+
+        _mailbox.ref.state = _stateClosed;
+        _mailbox.ref.buffer = nullptr;
+        _mailbox.ref.bufferLength = 0;
+
+        _condVar.notify();
+      });
+
   /// Take a message from the mailbox.
   ///
+
   /// If mailbox is empty this will synchronously block until message
   /// is available.
+   // If mailbox is closed then [take] will throw [StateError].
   /// If [timeout] is provided then this will block for at most [timeout].
   /// If the timeout expires before a message is available then this will
   /// throw a [TimeoutException].
@@ -113,6 +131,10 @@ class Mailbox {
           final remainingTime = _remainingTime(timeout, start);
           _condVar.wait(_mutex, timeout: remainingTime);
         }
+        
+         if (_mailbox.ref.state == _stateClosed) {
+          throw StateError('Mailbox is closed');
+        }
 
         final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
 
@@ -133,8 +155,12 @@ class Mailbox {
   }
 
   Uint8List _take() => _mutex.runLocked(() {
-        while (_mailbox.ref.state != _stateFull) {
+        while (_mailbox.ref.state == _stateEmpty) {
           _condVar.wait(_mutex);
+        }
+
+        if (_mailbox.ref.state == _stateClosed) {
+          throw StateError('Mailbox is closed');
         }
 
         final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);

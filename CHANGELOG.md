@@ -1,10 +1,10 @@
 # 0.4.0
-- Made the TimeoutException messages more consistent. Fixed a lint for Timeout Test
- Note: the Mutex timeout is ignored on Windows.
+- Added a timeout to the Mailbox.take, Mutex.runLocked and ConditionVariable.wait methods.
+- Note: the Mutex timeout is ignored on Windows.
 
 ## 0.3.0
-Added a timeout to the Mailbox.take, Mutex.runLocked and ConditionVariable.wait methods.
 
+- Add a closed state to `Mailbox`.
 
 ## 0.2.0
 

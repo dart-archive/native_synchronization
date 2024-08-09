@@ -1,10 +1,7 @@
-name: native_synchronization_temp
-description: |
-  Low level synchronization primitives built on dart:ffi. 
-  This variant is a place holder until PR 2 is merged 
-  https: //github.com/dart-lang/native_synchronization/pull/27/commits
-
 version: 0.4.0
+name: native_synchronization
+description: Low level synchronization primitives built on dart:ffi.
+
 repository: https://github.com/dart-lang/native_synchronization
 
 environment:
