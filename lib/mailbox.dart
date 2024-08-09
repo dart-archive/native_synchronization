@@ -142,6 +142,9 @@ class Mailbox {
         final state = _mailbox.ref.state;
         print('State: $state');
 
+        /////////////
+        /// The presense following line causes the crash
+        ////////////////////////
         if (state == _stateClosed) {
           throw StateError('Mailbox is closed');
         }
