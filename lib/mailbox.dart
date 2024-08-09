@@ -107,9 +107,10 @@ class Mailbox {
   /// If the mailbox is empty this will synchronously block until message
   /// is available or a timeout occurs.
   /// If the mailbox is closed then [take] will throw [StateError].
-  /// 
+  ///
   /// If not [timeout] is provided then this method will block
   /// indefinitely.
+  ///
   /// If [timeout] is provided then this will block for at most [timeout].
   /// If the timeout expires before a message is available then this will
   /// throw a [TimeoutException].
@@ -156,7 +157,7 @@ class Mailbox {
   }
 
   Uint8List _take() => _mutex.runLocked(() {
-        while (_mailbox.ref.state != _stateFull) {
+        while (_mailbox.ref.state == _stateEmpty) {
           _condVar.wait(_mutex);
         }
 
