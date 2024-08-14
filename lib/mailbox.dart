@@ -139,25 +139,20 @@ class Mailbox {
           // _condVar.wait(_mutex);
           _condVar.wait(_mutex, timeout: remainingTime);
         }
-        final state = _mailbox.ref.state;
-        print('State: $state');
 
-        /////////////
-        /// The presense following line causes the crash
-        ////////////////////////
-        if (state == _stateClosed) {
-          throw StateError('Mailbox is closed');
-        }
+        // removed until https://github.com/dart-lang/sdk/issues/56412
+        // final state = _mailbox.ref.state;
+        // if (state == _stateClosed) {
+        //   throw StateError('Mailbox is closed');
+        // }
 
-        // final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
+        final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
 
-        // _mailbox.ref.state = _stateEmpty;
-        // _mailbox.ref.buffer = nullptr;
-        // _mailbox.ref.bufferLength = 0;
-        // return result;
-
+        _mailbox.ref.state = _stateEmpty;
+        _mailbox.ref.buffer = nullptr;
+        _mailbox.ref.bufferLength = 0;
         print('Mailbox::_takeTimed - lock relased');
-        return Uint8List(1);
+        return result;
       },
     );
   }
