@@ -61,9 +61,19 @@ class _WindowsConditionVariable extends ConditionVariable {
     WakeConditionVariable(_impl);
   }
 
+  bool _getLastErrorInitialised = false;
+
   static const ERROR_TIMEOUT = 0x5b4;
   @override
   void wait(covariant _WindowsMutex mutex, {Duration? timeout}) {
+    if (!_getLastErrorInitialised) {
+      // GetLastError (can be) lazily linked, so when you invoke GetLastError
+      // for the first time execution would go into runtime to perform
+      // resolution and clobber the current value.
+      // So we call it once up front to get the lazy linking out of the way.
+      GetLastError();
+      _getLastErrorInitialised = true;
+    }
     const infinite = 0xFFFFFFFF;
     const exclusive = 0;
     final result = SleepConditionVariableSRW(_impl, mutex._impl,
