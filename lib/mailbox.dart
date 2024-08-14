@@ -142,10 +142,10 @@ class Mailbox {
         }
 
         // removed until https://github.com/dart-lang/sdk/issues/56412
-        // final state = _mailbox.ref.state;
-        // if (state == _stateClosed) {
-        //   throw StateError('Mailbox is closed');
-        // }
+        final state = _mailbox.ref.state;
+        if (state == _stateClosed) {
+          throw StateError('Mailbox is closed');
+        }
 
         final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
 
