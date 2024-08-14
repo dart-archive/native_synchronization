@@ -134,9 +134,9 @@ class Mailbox {
           final remainingTime = _remainingTime(timeout, start);
           _condVar.wait(_mutex, timeout: remainingTime);
         }
-        if (_mailbox.ref.state == _stateClosed) {
-          throw StateError('Mailbox is closed');
-        }
+        // if (_mailbox.ref.state == _stateClosed) {
+        //   throw StateError('Mailbox is closed');
+        // }
 
         final result = _toList(_mailbox.ref.buffer, _mailbox.ref.bufferLength);
 
