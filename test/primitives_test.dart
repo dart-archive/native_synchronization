@@ -8,11 +8,20 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
+import 'package:logging/logging.dart';
 import 'package:native_synchronization/primitives.dart';
 import 'package:native_synchronization/sendable.dart';
 import 'package:test/test.dart';
 
+final Logger _logger = Logger('Testing');
+
 void main() {
+  // Set up a log handler
+  Logger.root.level = Level.ALL; // Set the root level to capture all logs
+  Logger.root.onRecord.listen((rec) {
+    print('${rec.level.name}: ${rec.time}: ${rec.message}');
+  });
+
   group('mutex', () {
     // test('simple', () {
     //   final mutex = Mutex();
@@ -28,149 +37,143 @@ void main() {
     ///
     /// Returns success
     ///
-    // Future<String> spawnHelperIsolate(
-    //     int ptrAddress, Sendable<Mutex> sendableMutex) {
-    //   return Isolate.run(() {
-    //     final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
-    //     final mutex = sendableMutex.materialize();
+    Future<String> spawnHelperIsolate(
+            int ptrAddress, Sendable<Mutex> sendableMutex) async =>
+        Isolate.run(() {
+          final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
+          final mutex = sendableMutex.materialize();
 
-    //     while (true) {
-    //       sleep(const Duration(milliseconds: 10));
-    //       if (mutex.runLocked(() {
-    //         if (ptr.value == 2) {
-    //           return true;
-    //         }
-    //         ptr.value = 0;
-    //         sleep(const Duration(milliseconds: 500));
-    //         ptr.value = 1;
-    //         return false;
-    //       })) {
-    //         break;
-    //       }
-    //     }
+          while (true) {
+            sleep(const Duration(milliseconds: 10));
+            if (mutex.runLocked(() {
+              if (ptr.value == 2) {
+                return true;
+              }
+              ptr.value = 0;
+              sleep(const Duration(milliseconds: 500));
+              ptr.value = 1;
+              return false;
+            })) {
+              break;
+            }
+          }
 
-    //     return 'success';
-    //   });
-    // }
+          return 'success';
+        });
 
-    // test('isolate', () async {
-    //   await using((arena) async {
-    //     final ptr = arena.allocate<Uint8>(1);
-    //     final mutex = Mutex();
+    test('isolate', () async {
+      await using((arena) async {
+        final ptr = arena.allocate<Uint8>(1);
+        final mutex = Mutex();
 
-    //     final helperResult = spawnHelperIsolate(ptr.address, mutex.asSendable);
+        final helperResult = spawnHelperIsolate(ptr.address, mutex.asSendable);
 
-    //     while (true) {
-    //       final sw = Stopwatch()..start();
-    //       if (mutex.runLocked(() {
-    //         if (sw.elapsedMilliseconds > 300 && ptr.value == 1) {
-    //           ptr.value = 2;
-    //           return true;
-    //         }
-    //         return false;
-    //       })) {
-    //         break;
-    //       }
-    //       await Future.delayed(const Duration(milliseconds: 10), () {});
-    //     }
-    //     expect(await helperResult, equals('success'));
-    //   });
-    // });
+        while (true) {
+          final sw = Stopwatch()..start();
+          if (mutex.runLocked(() {
+            if (sw.elapsedMilliseconds > 300 && ptr.value == 1) {
+              ptr.value = 2;
+              return true;
+            }
+            return false;
+          })) {
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 10), () {});
+        }
+        expect(await helperResult, equals('success'));
+      });
+    });
 
-    // test('Timeout', () async {
-    //   final mutex = Mutex();
+    test('Timeout', () async {
+      final mutex = Mutex();
 
-    //   unawaited(
-    //       spawnLockedMutex(mutex.asSendable, const Duration(seconds: 10)));
+      unawaited(
+          spawnLockedMutex(mutex.asSendable, const Duration(seconds: 10)));
 
-    //   /// give the isoalte a chance to start.
-    //   sleep(const Duration(seconds: 2));
+      /// give the isolate a chance to start.
+      sleep(const Duration(seconds: 2));
 
-    //   /// force a timeout
-    //   expect(
-    //       () => mutex.runLocked(timeout: const Duration(seconds: 3), () {
-    //             sleep(const Duration(milliseconds: 100));
-    //             return true;
-    //           }),
-    //       throwsA(isA<TimeoutException>()));
+      /// force a timeout
+      expect(
+          () => mutex.runLocked(timeout: const Duration(seconds: 3), () {
+                sleep(const Duration(milliseconds: 100));
+                return true;
+              }),
+          throwsA(isA<TimeoutException>()));
 
-    //   /// wait for the lock to be released.
-    //   expect(
-    //       mutex.runLocked(timeout: const Duration(seconds: 15), () {
-    //         sleep(const Duration(milliseconds: 100));
-    //         return true;
-    //       }),
-    //       isTrue);
-    // });
+      /// wait for the lock to be released.
+      expect(
+          mutex.runLocked(timeout: const Duration(seconds: 15), () {
+            sleep(const Duration(milliseconds: 100));
+            return true;
+          }),
+          isTrue);
+    });
   });
 
   group('condvar', () {
-    // Future<String> spawnHelperIsolate(
-    //     int ptrAddress,
-    //     Sendable<Mutex> sendableMutex,
-    //     Sendable<ConditionVariable> sendableCondVar) async {
-    //   return Isolate.run(() {
-    //     final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
-    //     final mutex = sendableMutex.materialize();
-    //     final condVar = sendableCondVar.materialize();
+    Future<String> spawnHelperIsolate(
+            int ptrAddress,
+            Sendable<Mutex> sendableMutex,
+            Sendable<ConditionVariable> sendableCondVar) async =>
+        Isolate.run(() {
+          final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
+          final mutex = sendableMutex.materialize();
+          final condVar = sendableCondVar.materialize();
 
-    //     return mutex.runLocked(() {
-    //       ptr.value = 1;
-    //       while (ptr.value == 1) {
-    //         condVar.wait(mutex);
-    //       }
-    //       return ptr.value == 2 ? 'success' : 'failure';
-    //     });
-    //   });
-    // }
+          return mutex.runLocked(() {
+            ptr.value = 1;
+            while (ptr.value == 1) {
+              condVar.wait(mutex);
+            }
+            return ptr.value == 2 ? 'success' : 'failure';
+          });
+        });
 
-    // test('isolate', () async {
-    //   await using((arena) async {
-    //     final ptr = arena.allocate<Uint8>(1);
-    //     final mutex = Mutex();
-    //     final condVar = ConditionVariable();
+    test('isolate', () async {
+      await using((arena) async {
+        final ptr = arena.allocate<Uint8>(1);
+        final mutex = Mutex();
+        final condVar = ConditionVariable();
 
-    //     final helperResult = spawnHelperIsolate(
-    //         ptr.address, mutex.asSendable, condVar.asSendable);
+        final helperResult = spawnHelperIsolate(
+            ptr.address, mutex.asSendable, condVar.asSendable);
 
-    //     while (true) {
-    //       final success = mutex.runLocked(() {
-    //         if (ptr.value == 1) {
-    //           ptr.value = 2;
-    //           condVar.notify();
-    //           return true;
-    //         }
-    //         return false;
-    //       });
-    //       if (success) {
-    //         break;
-    //       }
-    //       await Future.delayed(const Duration(milliseconds: 20), () {});
-    //     }
+        while (true) {
+          final success = mutex.runLocked(() {
+            if (ptr.value == 1) {
+              ptr.value = 2;
+              condVar.notify();
+              return true;
+            }
+            return false;
+          });
+          if (success) {
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 20), () {});
+        }
 
-    //     expect(await helperResult, equals('success'));
-    //   });
-    // });
+        expect(await helperResult, equals('success'));
+      });
+    });
   });
 }
 
 /// Create an isolate that locks the mutex for [duration]
-// Future<void> spawnLockedMutex(
-//         Sendable<Mutex> sendableMutex, Duration duration) async =>
-//     Isolate.run<void>(() {
-//       final mutex = sendableMutex.materialize();
-//       log('Isolate started');
+Future<void> spawnLockedMutex(
+        Sendable<Mutex> sendableMutex, Duration duration) async =>
+    Isolate.run<void>(() {
+      final mutex = sendableMutex.materialize();
+      _logger.fine(() => 'Isolate started');
 
-//       mutex.runLocked(() {
-//         log('isolate spawnLockedMutext has lock');
-//         // await Future.delayed(duration);
-//         sleep(duration);
-//         log('isolate spawnLockedMutext returning');
-//         return true;
-//       });
-//       log('runLock completed');
-//     });
-
-void log(String message) {
-  print('${DateTime.now()}: $message');
-}
+      mutex.runLocked(() {
+        _logger.fine(() => 'isolate spawnLockedMutext has lock');
+        // await Future.delayed(duration);
+        sleep(duration);
+        _logger.fine(() => 'isolate spawnLockedMutext returning');
+        return true;
+      });
+      _logger.fine(() => 'runLock completed');
+    });

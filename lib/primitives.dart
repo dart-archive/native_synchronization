@@ -21,6 +21,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:logging/logging.dart';
 
 import 'sendable.dart';
 import 'src/bindings/pthread.dart';
@@ -28,6 +29,8 @@ import 'src/bindings/winapi.dart';
 
 part 'posix.dart';
 part 'windows.dart';
+
+final Logger _logger = Logger('primatives');
 
 /// A *mutex* synchronization primitive.
 ///
@@ -72,14 +75,15 @@ sealed class Mutex implements Finalizable {
   ///
   /// **Warning**: you can't combine `runLocked` with an asynchronous code.
   R runLocked<R>(R Function() action, {Duration? timeout}) {
-     print('Mutex::runLocked: $timeout');
-    print('Mutex: about to call lock');
+     _logger.fine(() => 'Mutex::runLocked: $timeout');
     _lock(timeout: timeout);
-    print('Mutex: calling action');
     try {
+    _logger.fine(() => 'Mutex: calling action');
       return action();
     } finally {
+      _logger.fine(() => 'Mutex: calling _unlock');
       _unlock();
+      _logger.fine(() => 'Mutex: unlocked');
     }
   }
 

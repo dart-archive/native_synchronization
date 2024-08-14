@@ -36,43 +36,45 @@ class _PosixMutex extends Mutex {
 
   @override
   void _lock({Duration? timeout}) {
-    print(' PosixMutex:Lock - enter');
+    _logger.fine(() => ' PosixMutex:_lock - enter');
     if (timeout == null) {
       if (pthread_mutex_lock(_impl) != 0) {
-        throw StateError('Failed to lock mutex');
+        throw StateError('PosixMutex:_lock - Failed to lock mutex');
       }
     } else {
       _timedLock(timeout);
     }
-    print(' PosixMutex:Lock - return');
+    _logger.fine(() => ' PosixMutex:_lock - return');
   }
 
+  /// Take a lock, throwing a [TimeoutException] if the
+  /// lock isn't acquired within [timeout].
   void _timedLock(Duration timeout) {
-    print('PosixMutex::_timedLock: $timeout');
-    var timespec = _allocateTimespec(timeout);
-    print('call posiz timed lock');
+    _logger.fine(() => 'PosixMutex::_timedLock: $timeout');
+    final timespec = _allocateTimespec(timeout);
+    _logger.fine(() => 'PosixMutex::call posix mutext_timedlock');
     final result = pthread_mutex_timedlock(_impl, timespec);
-    print('returned from posiz timed lock');
+    _logger.fine(() => 'PosixMutex::returned from posix mutext_timedlock');
     malloc.free(timespec);
 
     if (result == ETIMEDOUT) {
-      print('throwning timeout');
+      _logger.fine(() => 'PosixMutex::throwning timeout');
       throw TimeoutException('Timed out waiting for Mutex lock');
     }
     if (result != 0) {
       throw StateError('Failed to lock mutex');
     }
 
-    print('PosixMutex::_timedLock: returned');
+    _logger.fine(() => 'PosixMutex::_timedLock: returning');
   }
 
   @override
   void _unlock() {
-    print('PosixMutex::_unLock- enter');
+    _logger.fine(() => 'PosixMutex::_unLock- enter');
     if (pthread_mutex_unlock(_impl) != 0) {
       throw StateError('Failed to unlock mutex');
     }
-    print('PosixMutex::_unLock- return');
+    _logger.fine(() => 'PosixMutex::_unLock- return');
   }
 
   @override
@@ -161,7 +163,7 @@ Pointer<pthread_timespec_t> _allocateTimespec(Duration timeout) {
   // timespec.ref.tv_nsec = (wakupTime % 1000000) * 1000;
   timespec.ref.tv_nsec = 0;
 
-  print(timespec.ref.tv_sec);
-  print(timespec.ref.tv_nsec);
+  _logger.fine(
+      () => 'tv_sec: ${timespec.ref.tv_sec} tv_nsec:${timespec.ref.tv_nsec}');
   return timespec;
 }

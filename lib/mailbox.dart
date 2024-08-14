@@ -2,13 +2,17 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:logging/logging.dart';
 
 import 'primitives.dart';
 import 'sendable.dart';
+
+final Logger _logger = Logger('Mailbox');
 
 final class _MailboxRepr extends Struct {
   external Pointer<Uint8> buffer;
@@ -49,12 +53,10 @@ class Mailbox {
   static const _stateFull = 1;
   static const _stateClosed = 2;
 
-  static final finalizer = Finalizer((mailbox) {
-    print('finalizer called');
-    final p = mailbox! as Pointer<_MailboxRepr>;
-    calloc
-      ..free(p.ref.buffer)
-      ..free(p);
+  static final finalizer = Finalizer((Pointer<_MailboxRepr> mailbox) {
+    _logger.fine(() => 'finalizer called');
+    calloc.free(mailbox.ref.buffer);
+    calloc.free(mailbox);
   });
 
   Mailbox()
@@ -124,19 +126,18 @@ class Mailbox {
     }
   }
 
-  Uint8List _takeTimed(final Duration timeout) {
+  Uint8List _takeTimed(Duration timeout) {
     final start = DateTime.now();
 
-    print('Mailbox::_takeTimed - enter');
+    _logger.fine(() => 'Mailbox::_takeTimed - enter');
     return _mutex.runLocked(
       timeout: timeout,
       () {
-        print('Mailbox::_takeTimed - lock acquired');
+        _logger.fine(() => 'Mailbox::_takeTimed - lock acquired');
 
         /// Wait for an item to be posted into the mailbox.
         while (_mailbox.ref.state == _stateEmpty) {
           final remainingTime = _remainingTime(timeout, start);
-          // _condVar.wait(_mutex);
           _condVar.wait(_mutex, timeout: remainingTime);
         }
 
@@ -151,7 +152,7 @@ class Mailbox {
         _mailbox.ref.state = _stateEmpty;
         _mailbox.ref.buffer = nullptr;
         _mailbox.ref.bufferLength = 0;
-        print('Mailbox::_takeTimed - lock relased');
+        _logger.fine(() => 'Mailbox::_takeTimed - releasing lock');
         return result;
       },
     );
@@ -189,7 +190,7 @@ class Mailbox {
       return _emptyResponse;
     }
 
-    // TODO: remove feature detection once 3.1 becomes stable.
+    // TODO(Slava Egorov): remove feature detection once 3.1 becomes stable.
     // ignore: omit_local_variable_types
     final Uint8List Function(int) asTypedList = buffer.asTypedList;
     if (asTypedList is Uint8List Function(int,
