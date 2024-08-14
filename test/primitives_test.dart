@@ -9,8 +9,8 @@ import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
-import 'package:native_synchronization_temp/primitives.dart';
-import 'package:native_synchronization_temp/sendable.dart';
+import 'package:native_synchronization/primitives.dart';
+import 'package:native_synchronization/sendable.dart';
 import 'package:test/test.dart';
 
 final Logger _logger = Logger('Testing');
