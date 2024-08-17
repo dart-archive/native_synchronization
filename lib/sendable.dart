@@ -3,9 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 abstract final class Sendable<T> {
-  static Sendable<T> wrap<T, U>(T Function(U) make, U data) {
-    return _SendableImpl._(make, data);
-  }
+  static Sendable<T> wrap<T, U>(T Function(U) make, U data) 
+    => _SendableImpl._(make, data);
 
   T materialize();
 }

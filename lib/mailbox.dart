@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:typed_data';
 
@@ -109,14 +110,11 @@ class Mailbox {
     });
   }
 
-  /// Gets the [Mailboxes] state which can change concurrently.
+  /// Gets the [Mailbox]'s state which can change concurrently.
   /// Once a [Mailbox] has reached the [MailboxState.closed]
   /// state it can no longer change state.
-  MailboxState get state {
-    return _mutex.runLocked(() {
-      return MailboxState.from(_mailbox.ref.state);
-    });
-  }
+  MailboxState get state => _mutex.runLocked(() 
+    => MailboxState.from(_mailbox.ref.state));
 
   bool isEmpty() => state == MailboxState.empty;
 
@@ -160,7 +158,7 @@ class Mailbox {
     }
   }
 
-  Uint8List _takeTimed(final Duration timeout) {
+  Uint8List _takeTimed(Duration timeout) {
     final start = DateTime.now();
 
     return _mutex.runLocked(

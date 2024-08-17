@@ -7,8 +7,8 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:native_synchronization/mailbox.dart';
-import 'package:native_synchronization/sendable.dart';
+import 'package:native_synchronization_temp/mailbox.dart';
+import 'package:native_synchronization_temp/sendable.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -41,23 +41,24 @@ void main() {
     expect(await helperResult, equals('success'));
   });
 
-  Future<String> startHelperIsolateClose(Sendable<Mailbox> sendableMailbox) {
-    return Isolate.run(() {
+  Future<String> startHelperIsolateClose(Sendable<Mailbox> sendableMailbox) 
+    // ignore: discarded_futures
+    => Isolate.run(() {
       sleep(const Duration(milliseconds: 500));
       final mailbox = sendableMailbox.materialize();
       try {
         mailbox.take();
+      // ignore: avoid_catches_without_on_clauses
       } catch (_) {
         return 'success';
       }
       return 'failed';
     });
-  }
 
   test('mailbox close', () async {
-    final mailbox = Mailbox();
-    mailbox.put(Uint8List(42)..[41] = 42);
-    mailbox.close();
+    final mailbox = Mailbox()
+      ..put(Uint8List(42)..[41] = 42)
+      ..close();
     final helperResult = startHelperIsolateClose(mailbox.asSendable);
     expect(await helperResult, equals('success'));
   });

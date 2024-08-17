@@ -8,8 +8,8 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
-import 'package:native_synchronization/primitives.dart';
-import 'package:native_synchronization/sendable.dart';
+import 'package:native_synchronization_temp/primitives.dart';
+import 'package:native_synchronization_temp/sendable.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -29,8 +29,8 @@ void main() {
     /// Returns success
     ///
     Future<String> spawnHelperIsolate(
-        int ptrAddress, Sendable<Mutex> sendableMutex) {
-      return Isolate.run(() {
+        // ignore: discarded_futures
+        int ptrAddress, Sendable<Mutex> sendableMutex) => Isolate.run(() {
         final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
         final mutex = sendableMutex.materialize();
 
@@ -51,7 +51,6 @@ void main() {
 
         return 'success';
       });
-    }
 
     test('isolate', () async {
       await using((arena) async {
@@ -108,8 +107,7 @@ void main() {
     Future<String> spawnHelperIsolate(
         int ptrAddress,
         Sendable<Mutex> sendableMutex,
-        Sendable<ConditionVariable> sendableCondVar) async {
-      return Isolate.run(() {
+        Sendable<ConditionVariable> sendableCondVar) async => Isolate.run(() {
         final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
         final mutex = sendableMutex.materialize();
         final condVar = sendableCondVar.materialize();
@@ -122,7 +120,6 @@ void main() {
           return ptr.value == 2 ? 'success' : 'failure';
         });
       });
-    }
 
     test('isolate', () async {
       await using((arena) async {

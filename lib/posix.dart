@@ -46,7 +46,7 @@ class _PosixMutex extends Mutex {
   }
 
   void _timedLock(Duration timeout) {
-    var timespec = _allocateTimespec(timeout);
+    final timespec = _allocateTimespec(timeout);
     final result = pthread_mutex_timedlock(_impl, timespec);
     malloc.free(timespec);
 
