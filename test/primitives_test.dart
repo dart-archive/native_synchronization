@@ -29,8 +29,9 @@ void main() {
     /// Returns success
     ///
     Future<String> spawnHelperIsolate(
-        // ignore: discarded_futures
-        int ptrAddress, Sendable<Mutex> sendableMutex) => Isolate.run(() {
+        int ptrAddress, Sendable<Mutex> sendableMutex) {
+      // ignore: discarded_futures
+      return Isolate.run(() {
         final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
         final mutex = sendableMutex.materialize();
 
@@ -51,6 +52,7 @@ void main() {
 
         return 'success';
       });
+    }
 
     test('isolate', () async {
       await using((arena) async {
@@ -105,21 +107,22 @@ void main() {
 
   group('condvar', () {
     Future<String> spawnHelperIsolate(
-        int ptrAddress,
-        Sendable<Mutex> sendableMutex,
-        Sendable<ConditionVariable> sendableCondVar) async => Isolate.run(() {
-        final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
-        final mutex = sendableMutex.materialize();
-        final condVar = sendableCondVar.materialize();
+            int ptrAddress,
+            Sendable<Mutex> sendableMutex,
+            Sendable<ConditionVariable> sendableCondVar) async =>
+        Isolate.run(() {
+          final ptr = Pointer<Uint8>.fromAddress(ptrAddress);
+          final mutex = sendableMutex.materialize();
+          final condVar = sendableCondVar.materialize();
 
-        return mutex.runLocked(() {
-          ptr.value = 1;
-          while (ptr.value == 1) {
-            condVar.wait(mutex);
-          }
-          return ptr.value == 2 ? 'success' : 'failure';
+          return mutex.runLocked(() {
+            ptr.value = 1;
+            while (ptr.value == 1) {
+              condVar.wait(mutex);
+            }
+            return ptr.value == 2 ? 'success' : 'failure';
+          });
         });
-      });
 
     test('isolate', () async {
       await using((arena) async {

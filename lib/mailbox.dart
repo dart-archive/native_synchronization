@@ -113,8 +113,8 @@ class Mailbox {
   /// Gets the [Mailbox]'s state which can change concurrently.
   /// Once a [Mailbox] has reached the [MailboxState.closed]
   /// state it can no longer change state.
-  MailboxState get state => _mutex.runLocked(() 
-    => MailboxState.from(_mailbox.ref.state));
+  MailboxState get state =>
+      _mutex.runLocked(() => MailboxState.from(_mailbox.ref.state));
 
   bool isEmpty() => state == MailboxState.empty;
 
@@ -215,7 +215,7 @@ class Mailbox {
       return _emptyResponse;
     }
 
-    // TODO: remove feature detection once 3.1 becomes stable.
+    // TODO(Slava.Egorva): remove feature detection once 3.1 becomes stable.
     // ignore: omit_local_variable_types
     final Uint8List Function(int) asTypedList = buffer.asTypedList;
     if (asTypedList is Uint8List Function(int,

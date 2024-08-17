@@ -41,19 +41,20 @@ void main() {
     expect(await helperResult, equals('success'));
   });
 
-  Future<String> startHelperIsolateClose(Sendable<Mailbox> sendableMailbox) 
-    // ignore: discarded_futures
-    => Isolate.run(() {
-      sleep(const Duration(milliseconds: 500));
-      final mailbox = sendableMailbox.materialize();
-      try {
-        mailbox.take();
-      // ignore: avoid_catches_without_on_clauses
-      } catch (_) {
-        return 'success';
-      }
-      return 'failed';
-    });
+  Future<String> startHelperIsolateClose(Sendable<Mailbox> sendableMailbox)
+      // ignore: discarded_futures
+      =>
+      Isolate.run(() {
+        sleep(const Duration(milliseconds: 500));
+        final mailbox = sendableMailbox.materialize();
+        try {
+          mailbox.take();
+          // ignore: avoid_catches_without_on_clauses
+        } catch (_) {
+          return 'success';
+        }
+        return 'failed';
+      });
 
   test('mailbox close', () async {
     final mailbox = Mailbox()
