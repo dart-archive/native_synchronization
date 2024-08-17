@@ -29,6 +29,28 @@ class _SendableMailbox {
       {required this.address, required this.mutex, required this.condVar});
 }
 
+enum MailboxState {
+  empty(Mailbox._stateEmpty),
+  full(Mailbox._stateFull),
+  closed(Mailbox._stateClosed);
+
+  final int state;
+
+  const MailboxState(this.state);
+
+  static MailboxState from(int state) {
+    switch (state) {
+      case Mailbox._stateEmpty:
+        return MailboxState.empty;
+      case Mailbox._stateFull:
+        return MailboxState.full;
+      case Mailbox._stateClosed:
+        return MailboxState.closed;
+    }
+    throw StateError('Mailbox is in unknown State: $state');
+  }
+}
+
 /// Mailbox communication primitive.
 ///
 /// This synchronization primitive allows a single producer to send messages
@@ -86,6 +108,21 @@ class Mailbox {
       _condVar.notify();
     });
   }
+
+  /// Gets the [Mailboxes] state which can change concurrently.
+  /// Once a [Mailbox] has reached the [MailboxState.closed]
+  /// state it can no longer change state.
+  MailboxState get state {
+    return _mutex.runLocked(() {
+      return MailboxState.from(_mailbox.ref.state);
+    });
+  }
+
+  bool isEmpty() => state == MailboxState.empty;
+
+  bool isClosed() => state == MailboxState.closed;
+
+  bool isFull() => state == MailboxState.full;
 
   /// Close a mailbox.
   ///
