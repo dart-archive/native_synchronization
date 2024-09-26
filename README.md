@@ -1,6 +1,8 @@
-[![Dart](https://github.com/dart-lang/native_synchronization/actions/workflows/dart.yaml/badge.svg)](https://github.com/dart-lang/native_synchronization/actions/workflows/dart.yaml)
-[![pub package](https://img.shields.io/pub/v/native_synchronization.svg)](https://pub.dev/packages/native_synchronization)
-[![package publisher](https://img.shields.io/pub/publisher/native_synchronization.svg)](https://pub.dev/packages/native_synchronization/publisher)
+> [!NOTE]  
+> The source-of-truth for this package has moved to
+https://github.com/dart-lang/labs/tree/main/pkgs/native_synchronization.
+
+## package:native_synchronization
 
 This package exposes a portable interface for low-level thread
 synchronization primitives like `Mutex` and `ConditionVariable`.
